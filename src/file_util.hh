@@ -1,12 +1,13 @@
 #ifndef FILE_UTIL_HH
 #define FILE_UTIL_HH
 
-#include "string.h"
+#include <cstring>
+#include <cassert>
 #include <iostream>
-
+#include <vector>
+#include <string>
 #include <zlib.h>
 #include "string_util.hh"
-
 
 class file_or_gz {
 private:
@@ -14,17 +15,22 @@ private:
     union { FILE *in; gzFile gz_in; };
     char *line;
     const size_t max_line_size;
-    
+
 public:
-    file_or_gz(std::string filename, size_t mls=10000) : max_line_size(mls) {
-        gzipped = filename.size() > 3
-            && filename.substr(filename.size() - 3) == ".gz";
-        if(gzipped) {
+    file_or_gz(std::string filename, size_t mls=10000)
+        : gzipped(filename.size() > 3 &&
+                  filename.substr(filename.size() - 3) == ".gz"),
+          max_line_size(mls)
+    {
+        if (gzipped) {
             gz_in = gzopen(filename.c_str(), "r");
         } else {
             in = filename != "-" ? fopen(filename.c_str(), "r") : stdin;
         }
-        assert(gzipped ? gz_in  != nullptr : in  != nullptr);
+        if (gzipped ? gz_in == Z_NULL : in  == nullptr) {
+            perror(filename.c_str());
+            exit(EXIT_FAILURE);
+        }
         line = new char[max_line_size];
     }
 
@@ -59,14 +65,16 @@ read_tuples(const std::string filename, const size_t ncols) {
         if (line == "") break;
         auto v = split(line, ' ');
         if (v.size() != ncols) {
-            std::cerr <<"wrong ncols : '"<< line <<"'\n";
+            std::cerr << "Wrong ncols: expected " << ncols << ", got "
+                      << v.size() << " for '" << line << "' in " << filename
+                      << ".\n";
             assert(v.size() == ncols);
         }
         rows.push_back(v);
     }
     return rows;
 }
-    
+
 static std::vector<std::vector<std::string> >
 read_csv(const std::string filename, const size_t ncol, ...) { // ... = column names
     std::vector<std::vector<std::string> > rows;
@@ -76,7 +84,7 @@ read_csv(const std::string filename, const size_t ncol, ...) { // ... = column n
     std::vector<std::string> colnames(ncol);
     va_list args;
     va_start(args, ncol);
-    for (int j = 0; j < ncol; ++j) {
+    for (size_t j = 0; j < ncol; ++j) {
         colnames[j] = va_arg(args, char *);
     }
     va_end(args);
@@ -89,20 +97,21 @@ read_csv(const std::string filename, const size_t ncol, ...) { // ... = column n
             first = false;
             int i = 0;
             for (auto s : split(line, ',')) {
-                for (int j = 0; j < ncol; ++j) {
+                for (size_t j = 0; j < ncol; ++j) {
                     if (s == colnames[j]) cols[j] = i;
                 }
                 ++i;
             }
-            for (int j = 0; j < ncol; ++j) {
+            for (size_t j = 0; j < ncol; ++j) {
                 if (cols[j] < 0)
-                    throw std::invalid_argument("missing column : "
-                                                + colnames[j] + " in:\n'" + line + "'");
+                    throw std::invalid_argument("Missing column: " + colnames[j]
+                                                + " in:\n'" + line + "'\n"
+                                                + filename);
             }
         } else {
             auto v = split(line, ',');
             std::vector<std::string> r(ncol);
-            for (int j = 0; j < ncol; ++j) {
+            for (size_t j = 0; j < ncol; ++j) {
                 assert(cols[j] < v.size());
                 r[j] = v[cols[j]];
             }
@@ -110,7 +119,7 @@ read_csv(const std::string filename, const size_t ncol, ...) { // ... = column n
         }
     }
     in.close();
-        
+
     return rows;
 }
 

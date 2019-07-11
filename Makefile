@@ -5,7 +5,7 @@ LDFLAGS:=
 CFLAGS_RELEASE:=-O3 -s -flto
 CFLAGS_DEBUG:=-g -Og -Wall -Wextra \
               -Wno-sign-compare -Wno-unused-parameter -Wno-unused-function
-CFLAGS:=-std=c++11 -pipe -march=native -pthread $(CFLAGS_DEBUG)
+CFLAGS:=-std=c++11 -pipe -march=native -pthread $(CFLAGS_RELEASE)
 
 main: hl-csa-raptor.o
 	@echo "Try it with 'make test'"

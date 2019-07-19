@@ -96,10 +96,10 @@ main(int argc, const char *argv[])
     //                dir+"calendar.txt", dir+"calendar_dates.txt",
     //                dir+"trips.txt", dir+"stop_times.txt", dir+"transfers.txt", true};
 
-    timetable ttbl{dir+"stop_times.csv.gz",
+    timetable ttbl{dir+"stop_times.csv",
                    dir+"walk_and_transfer_inhubs.gr.gz",
                    dir+"walk_and_transfer_outhubs.gr.gz",
-                   dir+"transfers.csv.gz", true};
+                   dir+"transfers.csv", true};
 
     //dir+"walking_and_transfers.gr", t_from, t_to};
     std::cerr << ttbl.n_r <<" routes, "<< ttbl.n_st <<" sations, "
@@ -162,7 +162,7 @@ main(int argc, const char *argv[])
         perror(path.c_str());
         exit(EXIT_FAILURE);
     }
-    out << "query,arrival,departure" << std::endl;
+    out << "query,edt,ldt,eat" << std::endl;
 
     // go profile Raptor
     sum = 0, n_ok = 0;
@@ -172,17 +172,18 @@ main(int argc, const char *argv[])
         auto &q(queries[i]);
         int src = std::get<0>(q);
         int dst = std::get<1>(q);
-        int t = std::get<2>(q);
-        if (t < t_beg) continue;
-        main_log.cerr(t) <<src<<" "<<dst<<" ["<<t_beg<<","<<t_end<<") : ";
-        pset prof = rpt.profile(rev_rpt, src, dst, t_beg, t_end,
+        int deptime = std::get<2>(q);
+        if (deptime < t_beg) continue;
+        main_log.cerr(t) <<src<<" "<<dst<<" ["<<deptime<<","<<t_end<<") : ";
+        pset prof = rpt.profile(rev_rpt, src, dst, deptime, t_end,
                                 false, true, chg);
         auto f = [&out, i]() { out << std::to_string(i) << ","; };
-        prof.rprint(f, out);
+        prof.rprint(f, deptime, out);
         int ntrips = prof.size();
         std::cout << ntrips <<"\n";
         sum += ntrips;
         ++n_ok;
+        t = main_log.lap();
     }
     out.close();
     cout_avg_time("prRaptor");

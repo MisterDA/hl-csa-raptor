@@ -142,10 +142,11 @@ public:
     }
 
     template <typename f>
-    void rprint(f &l, std::ostream &cout = std::cout) {
+    void rprint(f &l, int edp, std::ostream &cout = std::cout) {
         for (auto rit = pts.rbegin(); rit < pts.rend(); ++rit) {
             l();
-            cout << -rit->y << "," << rit->x << std::endl;
+            cout << edp << ',' << -rit->y << ',' << rit->x << std::endl;
+            edp = -rit->y;
         }
     }
 
